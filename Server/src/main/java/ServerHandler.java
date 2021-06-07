@@ -89,11 +89,11 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
                 e.printStackTrace();
             }
         }
-        if ("download".equals(message.split(" ")[0])) {
-            ctx.writeAndFlush(new FileToSend(Path.of(currentPath.toString(), message.split(" ")[1])));
+        if ("download".equals(message.split(" ",2)[0])) {
+            ctx.writeAndFlush(new FileToSend(Path.of(currentPath.toString(), message.split(" ",2)[1])));
         }
         if ("delete".equals(message.split(" ")[0])) {
-            Path pathForDelete = Path.of(currentPath.toString().concat("/").concat(message.split(" ")[1]));
+            Path pathForDelete = Path.of(currentPath.toString().concat("/").concat(message.split(" ",2)[1]));
             System.out.println(pathForDelete.toString());
             try {
                 Files.walkFileTree(pathForDelete, new SimpleFileVisitor<>() {
@@ -113,13 +113,13 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
             } catch (IOException ignored) {}
         }
         if ("create".equals(message.split(" ")[0])) {
-            Path newPath = Path.of(currentPath.toString().concat("/").concat(message.split(" ")[1]));
+            Path newPath = Path.of(currentPath.toString().concat("/").concat(message.split(" ",2)[1]));
             Files.createDirectories(newPath);
             updateFilesList(ctx, currentPath);
         }
         if ("find".equals(message.split(" ")[0])) {
             Path rootPath = pathRoot;
-            String fileToFind = File.separator + message.split(" ")[1];
+            String fileToFind = File.separator + message.split(" ",2)[1];
 
             try {
                 Files.walkFileTree(rootPath, new SimpleFileVisitor<Path>() {
@@ -146,9 +146,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         if ("rename".equals(message.split(" ")[0])) {
             System.out.println("rename files ");
             System.out.println(message + " message from client for rename");
-            Path oldPath = Path.of(currentPath.toString(), message.split(" ")[1]);
+            Path oldPath = Path.of(currentPath.toString(), message.split(" ",2)[1]);
             System.out.println("rename path current " + oldPath.toString());
-            Path newPath = Path.of(currentPath.toString(), message.split(" ")[2]);
+            Path newPath = Path.of(currentPath.toString(), message.split(" ",2)[2]);
             System.out.println("rename path new " + newPath.toString());
             Files.copy(oldPath, newPath);
             Files.delete(oldPath);
