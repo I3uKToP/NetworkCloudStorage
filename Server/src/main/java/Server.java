@@ -1,6 +1,3 @@
-
-//netty сервер,
-//не смог реализовать передачу файлов, а особенно путь для файлового менеджера.
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -11,15 +8,15 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.util.List;
-
-
+//netty сервер
 public class Server {
-    public static List<FileInfo> fileInfoServerList;
-    public static final int SERVER_PORT = 4006;
-    private static final int MAX_OBJ_SIZE = 1024 * 1024 * 100; // 100 mb
-
+    static Logger LOGGER = LogManager.getLogger(Server.class);
+    public static final int SERVER_PORT = 4007;
+    //максимальный объем файла для передачи
+    private static final int MAX_OBJ_SIZE = 1024 * 1024 * 2000; // 2000 mb
 
 
     public Server() {
@@ -32,19 +29,18 @@ public class Server {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<>() {
                         @Override
-                        protected void initChannel(Channel channel) throws Exception {
+                        protected void initChannel(Channel channel) {
                             channel.pipeline().addLast(
                                     new ObjectDecoder(MAX_OBJ_SIZE, ClassResolvers.cacheDisabled(null)),
                                     new ObjectEncoder(),
                                     new ServerHandler()
                             );
-
                         }
                     });
             ChannelFuture future = serverBootstrap.bind(SERVER_PORT).sync();
-            System.out.println("Server started");
+            LOGGER.info("Server started");
             future.channel().closeFuture().sync();
-            System.out.println("Server closed");
+            LOGGER.warn("Server closed");
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {

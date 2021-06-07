@@ -3,6 +3,7 @@ import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+//класс для передачи файлов, при передачи файлов мы создаем новый файл по пути и передаем его
 public class FileToSend implements Serializable {
     private String fileName;
     private String path;

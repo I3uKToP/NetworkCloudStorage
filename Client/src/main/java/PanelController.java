@@ -8,6 +8,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 /* панель для файлового менеджера где отображаются файлы, путь и диски*/
 
 public class PanelController implements Initializable {
+    static Logger LOGGER = LogManager.getLogger(Main.class);
     Path currentPathServer = Path.of("server");
     Path rootPath = Path.of("server");
 
@@ -53,23 +56,21 @@ public class PanelController implements Initializable {
         TableColumn<FileInfo, Long> fileSizeColumn = new TableColumn<>("Размер");
         fileSizeColumn.setCellValueFactory(param -> new SimpleObjectProperty<>(param.getValue().getSize()));
         fileSizeColumn.setPrefWidth(120);
-        fileSizeColumn.setCellFactory(column -> {
-            return new TableCell<FileInfo, Long>() {
-                @Override
-                protected void updateItem(Long aLong, boolean b) {
-                    super.updateItem(aLong, b);
-                    if (aLong == null || b) {
-                        setText(null);
-                        setStyle("");
-                    } else {
-                        String text = String.format("%,d byres", aLong);
-                        if (aLong == -1L) {
-                            text = "[DIR]";
-                        }
-                        setText(text);
+        fileSizeColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(Long aLong, boolean b) {
+                super.updateItem(aLong, b);
+                if (aLong == null || b) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    String text = String.format("%,d byres", aLong);
+                    if (aLong == -1L) {
+                        text = "[DIR]";
                     }
+                    setText(text);
                 }
-            };
+            }
         });
 //создаем колонку с датой изменения файла
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:s");
@@ -97,7 +98,6 @@ public class PanelController implements Initializable {
                 if (disksBox.getSelectionModel().getSelectedItem().equals("server")) {
                     Controller.clientConnection.sendMessage("updateFiles " + filesTable.getSelectionModel().getSelectedItem().getFilename());
                     currentPathServer = Path.of(currentPathServer.toString(), filesTable.getSelectionModel().getSelectedItem().getFilename());
-                    System.out.println(currentPathServer + " path on client double click");
                     pathField.setText(currentPathServer.normalize().toString());
                 }
             }
@@ -109,7 +109,6 @@ public class PanelController implements Initializable {
     /* метод позволяет обновить таблицу  в метод передается путь, из пути берутся название, тип, размер, дата модификации,
      * создается FileInfo и загружается в таблицу*/
     public void updateList(Path path) {
-        System.out.println(path);
         filesTable.getItems().clear();
         try {
             pathField.setText(path.normalize().toAbsolutePath().toString());
@@ -121,6 +120,7 @@ public class PanelController implements Initializable {
         }
     }
 
+    //метод для обновление файлов листа через параметр List
     public void updateList(List<FileInfo> files) {
         filesTable.getItems().clear();
         pathField.setText(currentPathServer.toString());
@@ -144,11 +144,9 @@ public class PanelController implements Initializable {
             return;
         }
         if (currentPathServer.toString().contains("server")) {
-            System.out.println(currentPathServer + " в условие вошел");
             Controller.clientConnection.sendMessage("parentDirectory");
             currentPathServer = currentPathServer.getParent();
             pathField.setText(currentPathServer.normalize().toString());
-            System.out.println(currentPathServer + " path for up");
         }
     }
 
@@ -157,7 +155,7 @@ public class PanelController implements Initializable {
         ComboBox<String> element = (ComboBox<String>) actionEvent.getSource();
 
         if (element.getSelectionModel().getSelectedItem().equals("server")) {
-            System.out.println("был выбран серевер");
+            LOGGER.info("Пользователь зашел на серверное хранилище");
             filesTable.getItems().clear();
             if (!ClientConnection.isAuth) {
                 Stage stage = new Stage();
@@ -222,8 +220,6 @@ public class PanelController implements Initializable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-
             stage.close();
         });
         FlowPane root = new FlowPane(Orientation.VERTICAL, 10, 10, textField, btn, lbl);
@@ -232,11 +228,10 @@ public class PanelController implements Initializable {
         stage.setScene(scene);
         stage.setTitle("Введите название папки");
         stage.show();
-
     }
 
+    //метод для поиска локальных файлов
     public void btnFindFile(ActionEvent actionEvent) {
-
         Stage stage = new Stage();
         Label lbl = new Label();
         TextField textField = new TextField();
@@ -249,9 +244,7 @@ public class PanelController implements Initializable {
                 stage.close();
                 return;
             }
-            System.out.println(rootPath.toString());
             String fileToFind = File.separator + textField.getText();
-
             try {
                 Files.walkFileTree(rootPath, new SimpleFileVisitor<Path>() {
 
@@ -260,7 +253,6 @@ public class PanelController implements Initializable {
                         String fileString = file.toAbsolutePath().toString();
 
                         if (fileString.endsWith(fileToFind)) {
-                            System.out.println("file found at path: " + file.toAbsolutePath());
                             filesTable.getItems().clear();
                             filesTable.getItems().add(new FileInfo(file));
                             pathField.setText(file.normalize().toString());

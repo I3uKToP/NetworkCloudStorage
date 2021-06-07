@@ -15,9 +15,6 @@ public class Main extends Application {
         primaryStage.setTitle("Cloud storage file manager");
         primaryStage.setScene(new Scene(root, 1280, 600));
         primaryStage.show();
-
-
-
     }
 
 

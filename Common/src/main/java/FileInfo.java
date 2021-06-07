@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
+//вспомогательный класс для создания объектов в таблице клиента, а также для передачи информации об объектах с сервера на клиент
 public class FileInfo implements Serializable {
     public enum FileType {
         FILE("F"), DIRECTORY("D");

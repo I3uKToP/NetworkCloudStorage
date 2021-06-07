@@ -1,8 +1,8 @@
 
 import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
 import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -13,51 +13,48 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
+//class для создания подключения
+
 public class ClientConnection {
+    static Logger LOGGER = LogManager.getLogger(Main.class);
     private Socket socket;
     private ObjectEncoderOutputStream oeos;
     private ObjectDecoderInputStream odis;
     protected static boolean isAuth;
     private boolean isConnected = true;
-    public static final int PORT = 4006;
+    public static final int PORT = 4007;
     public static List<FileInfo> fileInfoServerList = new ArrayList<>();
     public static Path pathRoot = Path.of("serverStorage");
-    private static final int MAX_OBJ_SIZE = 1024 * 1024 * 100; // 100 mb
+    private static final int MAX_OBJ_SIZE = 1024 * 1024 * 2000; // 2000 mb
 
     public ClientConnection() {
 
     }
 
     public void init(Controller controller) throws IOException {
-        this.socket = new Socket("localhost",PORT);
+        this.socket = new Socket("localhost", PORT);
         this.oeos = new ObjectEncoderOutputStream(socket.getOutputStream(), MAX_OBJ_SIZE);
         this.odis = new ObjectDecoderInputStream(socket.getInputStream(), MAX_OBJ_SIZE);
-        this.isAuth = false;
+        isAuth = false;
 
 
-
-
-        new Thread(()->{
+        //новый поток для чления данных с сервера
+        new Thread(() -> {
             while (isConnected) {
                 try {
                     Object message = odis.readObject();
                     PanelController leftPC = (PanelController) controller.leftPanel.getProperties().get("ctl");
                     PanelController rightPC = (PanelController) controller.rightPanel.getProperties().get("ctl");
                     if (message != null) {
-                        if( message instanceof List) {
+                        if (message instanceof List) {
+                            LOGGER.info("Сервер прислал список файлов");
                             fileInfoServerList = (List<FileInfo>) message;
                             leftPC.updateList(fileInfoServerList);
-
-                        }
-                        if (message instanceof FileInfo) {
-                            FileInfo test = (FileInfo) message;
-                            System.out.println(test.getFilename());
                         }
                         if (message instanceof FileToSend) {
-                            System.out.println("получен файл ");
-                            FileToSend file = (FileToSend) message;;
-                            Path path = Paths.get(rightPC.pathField.getText() + "/"  + file.getFileName());
-                            System.out.println(path + " path");
+                            LOGGER.info("С сервера получен файл: " +message);
+                            FileToSend file = (FileToSend) message;
+                            Path path = Paths.get(rightPC.pathField.getText() + "/" + file.getFileName());
                             try {
                                 if (Files.exists(path)) {
                                     Files.write(path, file.getData(), StandardOpenOption.TRUNCATE_EXISTING);
@@ -70,22 +67,16 @@ public class ClientConnection {
                             }
                         }
                         if (message.toString().contains("authOK")) {
-                            System.out.println("authOK from client" );
+                            LOGGER.info("Сервер авторизировал: " );
                             isAuth = true;
-                            System.out.println("auth client conn " + isAuth );
                             pathRoot = Path.of(pathRoot.toString(), message.toString().split(" ")[1]);
                             leftPC.pathField.setText(pathRoot.normalize().toString());
                         }
                         if ("WRONG".equals(message)) {
                             isAuth = false;
                         }
-
                     }
-                    System.out.println("что пришло с сервера для дебага " + message);
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
-                catch (IOException e) {
+                } catch (ClassNotFoundException | IOException e) {
                     e.printStackTrace();
                 }
             }

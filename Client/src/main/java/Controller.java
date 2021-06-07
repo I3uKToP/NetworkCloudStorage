@@ -8,8 +8,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
-import java.io.File;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.*;
@@ -19,6 +19,7 @@ import java.util.ResourceBundle;
 
 //общий контроллер, который следит за все таблицей и кнопками манипуляции данных
 public class Controller implements Initializable {
+    static Logger LOGGER = LogManager.getLogger(Main.class);
 
     @FXML
     VBox leftPanel, rightPanel;
@@ -37,13 +38,13 @@ public class Controller implements Initializable {
             e.printStackTrace();
         }
     }
-
+//метод для обработки событий при нажании на кнопку выход
     public void btnExitAction(ActionEvent actionEvent) {
         Platform.exit();
         clientConnection.closeConnection();
     }
 
-
+    //метод для обработки событий при нажании на кнопку копировать
     public void copyBtnAction(ActionEvent actionEvent) {
         PanelController leftPC = (PanelController) leftPanel.getProperties().get("ctl");
         PanelController rightPC = (PanelController) rightPanel.getProperties().get("ctl");
@@ -63,15 +64,11 @@ public class Controller implements Initializable {
             scrPC = rightPC;
             dstPC = leftPC;
         }
-
-
         Path srcPath = Path.of(scrPC.getCurrentPath(), scrPC.getSelectedFileName());
         Path dstPath = Path.of(dstPC.getCurrentPath()).resolve(srcPath.getFileName());
-        System.out.println(srcPath);
-        System.out.println(dstPath);
 
+        //если путь на левой и правой панели не начинается с сервера, то происходит локальное копирование
         if (!srcPath.toString().startsWith("server") && !dstPath.toString().startsWith("server")) {
-            System.out.println(" local copy ");
             try {
                 Files.copy(srcPath, dstPath);
                 dstPC.updateList(Path.of(dstPC.getCurrentPath()));
@@ -81,14 +78,17 @@ public class Controller implements Initializable {
             }
         }
 
+        //если путь назначения начинается с сервер, а исходный путь локальный, то происходит загрузка на сервер
         if (!srcPath.toString().startsWith("server") && dstPath.toString().contains("server")) {
             clientConnection.sendMessage(new FileToSend(srcPath));
         }
+        //если исходный путь начинается с сервер, а  путь назначения  локальный, то происходит скачивание с сервера
         if (srcPath.toString().contains("server") && !dstPath.toString().startsWith("server")) {
             clientConnection.sendMessage("download ".concat(leftPC.getSelectedFileName()));
         }
     }
 
+    // метод для описания работы кнопки "Удалить"
     public void btnRemove(ActionEvent actionEvent) {
         ButtonType yes = new ButtonType("Yes");
         ButtonType no = new ButtonType("No");
@@ -104,12 +104,10 @@ public class Controller implements Initializable {
             PanelController leftPC = (PanelController) leftPanel.getProperties().get("ctl");
             PanelController rightPC = (PanelController) rightPanel.getProperties().get("ctl");
             if (leftPC.getSelectedFileName() != null && leftPC.pathField.getText().contains("server")) {
-                System.out.println("remove file");
                 clientConnection.sendMessage("delete " + leftPC.getSelectedFileName());
             }
             if (leftPC.getSelectedFileName() != null || rightPC.getSelectedFileName() != null
                     && !leftPC.pathField.getText().contains("server") && !rightPC.pathField.getText().contains("server")) {
-                System.out.println("remove local file");
                 if (leftPC.getSelectedFileName() != null) {
                     deleteLocalFiles(leftPC);
                 }
@@ -120,9 +118,9 @@ public class Controller implements Initializable {
         }
     }
 
+    //метод локального удаления файлов, передается панель, на которой был выбран файл
     private void deleteLocalFiles(PanelController PC) {
         Path pathForDelete = Path.of(PC.pathField.getText(), PC.getSelectedFileName());
-        System.out.println(pathForDelete.toString() + " delete filese local");
         try {
             Files.walkFileTree(pathForDelete, new SimpleFileVisitor<>() {
                 @Override
@@ -143,6 +141,7 @@ public class Controller implements Initializable {
     }
 
 
+    //метод для работы кнопки "Переименовать"
     public void renameBtnAction(ActionEvent actionEvent) {
         PanelController leftPC = (PanelController) leftPanel.getProperties().get("ctl");
         PanelController rightPC = (PanelController) rightPanel.getProperties().get("ctl");
@@ -170,16 +169,12 @@ public class Controller implements Initializable {
         boolean finalIsFocusedLeftPanel = isFocusedLeftPanel;
         boolean finalSendToServer = sendToServer;
         btn.setOnAction(event -> {
-            System.out.println("text from textField : " + textField.getText());
-
             if (finalSendToServer) {
-                System.out.println("remove file");
                 clientConnection.sendMessage("rename " + finalOldPath.getFileName() +" " + textField.getText());
                 stage.close();
                 return;
             }
             if (!leftPC.pathField.getText().startsWith("server") && !rightPC.pathField.getText().startsWith("server")) {
-                System.out.println("rename local file");
                 renameFile(finalIsFocusedLeftPanel, finalIsFocusedRightPanel,finalOldPath, textField.getText());
                 stage.close();
             }
@@ -192,6 +187,7 @@ public class Controller implements Initializable {
         stage.show();
     }
 
+    //вспомогательный метод для кнопки переименовать
     private void renameFile(boolean isleftPanel, boolean isrightPanel, Path oldPath, String newName) {
         PanelController leftPC = (PanelController) leftPanel.getProperties().get("ctl");
         PanelController rightPC = (PanelController) rightPanel.getProperties().get("ctl");
