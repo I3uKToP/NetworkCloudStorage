@@ -121,6 +121,7 @@ public class Controller implements Initializable {
     //метод локального удаления файлов, передается панель, на которой был выбран файл
     private void deleteLocalFiles(PanelController PC) {
         Path pathForDelete = Path.of(PC.pathField.getText(), PC.getSelectedFileName());
+        LOGGER.info(pathForDelete);
         try {
             Files.walkFileTree(pathForDelete, new SimpleFileVisitor<>() {
                 @Override
@@ -196,10 +197,10 @@ public class Controller implements Initializable {
             Files.copy(oldPath, newPath);
             Files.delete(oldPath);
             if(isleftPanel) {
-                leftPC.updateList(oldPath.getParent());
+                leftPC.updateList(newPath.getParent());
             }
             if(isrightPanel) {
-                rightPC.updateList(oldPath.getParent());
+                rightPC.updateList(newPath.getParent());
             }
 
         } catch (IOException e) {
